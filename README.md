@@ -8,6 +8,7 @@ Siga las instrucciones en el repositorio de la Máquina de Café [Proyecto final
 
 1. [Configurar RPI](https://github.com/rscd27p/Maquina_de_Cafe/blob/main/Documentos/Configurar_RPI.md)
 2. [Sección - Instalación de Software en Raspberry PI](https://github.com/rscd27p/Maquina_de_Cafe/tree/main)
+3. [Real VNC](https://github.com/rscd27p/Maquina_de_Cafe/blob/main/Documentos/RealVNC.md)
 
 **Nota Importante:**  Se usa la misma nomenclatura para las consolas del Host y del RPI.
 
