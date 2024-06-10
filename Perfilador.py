@@ -24,11 +24,11 @@ def cpu_analyze():
         file.flush()
         while(ANALIZAR):
             y = cpu_percent(percpu=True)
-            writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S")]+y)
+            writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]]+y)
             file.flush()
             elapsedtime = time.time() - start_time
             print("Tiempo Transcurrido: " + str(elapsedtime) + " (s)" + "\nCarga CPU: " + str(y))
-            sleep(0.001)
+            sleep(0.1)
 
 def profiler():
 	cmd = ["py-spy", "top", "--subprocesses", "--pid", sys.argv[1]]
