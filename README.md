@@ -57,7 +57,7 @@ El resultado se vera de esta forma:
 
 ![Resultados_Scalene_CLI](./imgs/Resultados-Scalene-CLI.png)
 
-Esto significa que el programa hizo 1 000 000 de ejecuciones, como se puede ver el el reporte la linea de código 14 represento el 99 % [83% + 16%] de tiempo de ejecución y no hubo consumo significativo de memoria. En caso de un usar el argumento de --cli de Scalene, este genera un dos archivos en la misma ubicación del código perfilado. Puede abrir el archivo **profile.html**, el cual se vera de la siguiente forma:
+Esto significa que el programa hizo 1 000 000 de ejecuciones, como se puede ver el el reporte la linea de código 14 represento el 99 % [83% + 16%] de tiempo de ejecución y no hubo consumo significativo de memoria. En caso de un usar el argumento de --cli de Scalene se generara una salida del programa en la consola, para generar un archivo .html se puede usar el comando --html o para generar una salida en json se puede usar el comando --json. Puede abrir el archivo **profile.html**, el cual se vera de la siguiente forma:
 
 ![Resultados_Scalene_HTML](./imgs/Resultados-Scalene-HTML.png)
 
