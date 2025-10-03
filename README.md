@@ -47,7 +47,8 @@ Puede usar Scalene con el siguiente comando
 (.Fidelitas) ~S python -m scalene --cpu --memory --cli <nombre_de_programa> <argumentos de programa>
 ```
 
-Por ejemplo, dentro de la carpeta [Alto Consumo de CPU](./Alto_Consumo_de_CPU/) se puede encontrar las instrucciones para usar el script [Alto_Consumo_de_CPU.py](./Alto_Consumo_de_CPU/Alto_CPU.py). el cual se podria perfilar con Scalene de la siguiente forma:
+
+Al final de este documento en la sección [Programas a Correr](#Programas-a-Correr) se puede encontrar las instrucciones para usar el script [Alto_Consumo_de_CPU.py](./Alto_Consumo_de_CPU/Alto_CPU.py). el cual se podria perfilar con Scalene de la siguiente forma:
 
 ```
 (.Fidelitas) ~S python -m scalene --cpu --memory --cli Alto_Consumo_de_CPU.py 1000000
