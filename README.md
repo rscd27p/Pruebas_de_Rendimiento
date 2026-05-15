@@ -151,13 +151,100 @@ Scalene permite analizar:
 - Líneas de código con mayor tiempo de ejecución
 - Generación de reportes HTML interactivos
 
-## Instalación de Scalene en Windows
+### Instalación de Scalene en Windows
 
 Abra una consola de Windows (`CMD` o `PowerShell`) y ejecute:
 
 ```bash
 pip install scalene
 ```
+
+Puede verificar la instalación con:
+
+```bash
+python -m scalene --version
+```
+
+---
+
+### Uso Básico de Scalene
+
+La sintaxis general es:
+
+```bash
+python -m scalene --cpu --memory --cli <nombre_del_programa.py> <argumentos>
+```
+
+Por ejemplo:
+
+```bash
+python -m scalene --cpu --memory --cli .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+Esto ejecutará el programa y mostrará el análisis directamente en la consola.
+
+---
+
+### Generar Reporte HTML
+
+También es posible generar un reporte gráfico en formato HTML utilizando:
+
+```bash
+python -m scalene --cpu --memory --html .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+Al finalizar se generará un archivo llamado:
+
+```text
+profile.html
+```
+
+Este archivo puede abrirse desde cualquier navegador web.
+
+---
+
+### Generar Reporte JSON
+
+Para exportar los resultados en formato JSON:
+
+```bash
+python -m scalene --cpu --memory --json .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+---
+
+### Ejemplo de Resultado
+
+Scalene mostrará información similar a:
+
+```text
+Line 14: 95% CPU
+Line 18: 3% Memory
+```
+
+Esto permite identificar qué líneas del programa consumen más recursos.
+
+---
+
+## Recomendaciones
+
+- Cierre programas innecesarios antes de realizar las pruebas.
+- Ejecute la terminal como administrador si aparecen errores de permisos.
+- No utilice aplicaciones pesadas durante el perfilado para evitar alterar los resultados.
+- Se recomienda usar el reporte HTML para visualizar mejor los resultados.
+
+---
+
+## Compatibilidad
+
+Scalene puede utilizarse tanto en:
+
+- Raspberry PI
+- Windows
+- Linux
+- macOS
+
+Por lo tanto, los mismos programas del repositorio pueden analizarse desde cualquiera de estas plataformas.
 
 ## Uso de Perfilador en PC Windows
 
