@@ -31,22 +31,34 @@ def cpu_analyze():
             sleep(0.1)
 
 def profiler():
-	cmd = ["py-spy", "top", "--subprocesses", "--pid", sys.argv[1]]
-	p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1)
-	for line in iter(p.stdout.readline, b''):
-		x = str(line.rstrip())[11:]
-		if(len(x)>0):
-			results_file.write(x)
-			
-        # Cerrar archivo en caso de que se presione C
-		if("Control-C" in x):
-			results_file.seek(0, 0)
-			
-		results_file.write("\n")
-		if(PRINT_INFO):
-			print(x)
-	p.stdout.close()
-	p.wait()
+    while ANALIZAR:
+        cmd = ["py-spy", "dump", "--pid", sys.argv[1]]
+
+        p = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+
+        output, _ = p.communicate()
+
+        cpu_total = cpu_percent(interval=0.1)
+        cpu_cores = cpu_percent(percpu=True)
+
+        results_file.write(f"Fecha: {datetime.now()}\n")
+        results_file.write(f"CPU Total: {cpu_total}%\n")
+        results_file.write(f"CPU por núcleo: {cpu_cores}\n\n")
+        results_file.write(output)
+        results_file.write("\n" + "=" * 80 + "\n")
+        results_file.flush()
+
+        if PRINT_INFO:
+            print(f"CPU Total: {cpu_total}%")
+            print(f"CPU por núcleo: {cpu_cores}")
+            print(output)
+
+        sleep(1)
 
 if __name__ == "__main__":
     
