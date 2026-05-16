@@ -2,12 +2,11 @@
 # Refactorizado de Proyecto eBridge por Randy Cespedes <rscd27p - rcespedes27dds@gmail.com>
 # Adaptado para versiones recientes de py-spy
 # Diseñado para computadoras personales o máquinas virtuales con Windows
-# Adaptado para usar py-spy record en lugar de py-spy top
+# Adaptado para usar py-spy record con flamegraph y py-spy top en consola separada
 
 import sys
 import csv
 import subprocess
-import time
 from os import path, makedirs
 from datetime import datetime
 from time import sleep
@@ -24,36 +23,64 @@ def crear_directorio_logs():
         makedirs(LOGS_DIR)
 
 
+def obtener_fecha_hora_actual():
+    return datetime.now()
+
+
 def generar_nombre_archivo_cpu():
-    fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    fecha = obtener_fecha_hora_actual().strftime("%Y-%m-%d_%H-%M")
     return path.join(LOGS_DIR, f"log_cpu_windows_{fecha}.csv")
 
 
 def generar_nombre_archivo_perfilado():
-    fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    fecha = obtener_fecha_hora_actual().strftime("%Y-%m-%d_%H-%M")
     return path.join(LOGS_DIR, f"Resultado_de_Perfilado_Windows_{fecha}.txt")
 
 
-def formato_tiempo(segundos):
-    horas = int(segundos // 3600)
-    minutos = int((segundos % 3600) // 60)
-    seg = segundos % 60
-    return f"{horas:02d}:{minutos:02d}:{seg:06.3f}"
+def obtener_timestamp_csv():
+    return obtener_fecha_hora_actual().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+
+def abrir_pyspy_top(pid):
+    """
+    Abre py-spy top en una nueva consola CMD.
+    """
+
+    try:
+        subprocess.Popen(
+            [
+                "cmd",
+                "/c",
+                "start",
+                "Py-Spy Top",
+                "py-spy",
+                "top",
+                "--pid",
+                str(pid),
+                "--rate",
+                "10"
+            ],
+            shell=False
+        )
+
+        print("Ventana de py-spy top abierta.")
+
+    except Exception as error:
+        print(f"ERROR abriendo py-spy top: {error}")
 
 
 def cpu_analyze(csv_filename_cores, detener_evento, pid):
     """
     Monitorea el uso de CPU por núcleo mientras el proceso exista.
+    Guarda fecha y hora real en el CSV.
     """
-
-    start_time = time.time()
 
     with open(csv_filename_cores, "w", newline="", encoding="utf-8") as file:
 
         writer = csv.writer(file)
 
         writer.writerow(
-            ["Time"] + [f"Core_{n}" for n in range(1, cpu_count(logical=True) + 1)]
+            ["Fecha_Hora"] + [f"Core_{n}" for n in range(1, cpu_count(logical=True) + 1)]
         )
 
         file.flush()
@@ -67,18 +94,17 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
             carga_cpu = cpu_percent(percpu=True)
 
-            elapsed_time = time.time() - start_time
-            elapsed_time_formateado = formato_tiempo(elapsed_time)
+            fecha_hora_actual = obtener_timestamp_csv()
 
             writer.writerow(
-                [elapsed_time_formateado] + carga_cpu
+                [fecha_hora_actual] + carga_cpu
             )
 
             file.flush()
 
             print(
-                "Tiempo Transcurrido: "
-                + elapsed_time_formateado
+                "Fecha/Hora Actual: "
+                + fecha_hora_actual
                 + "\nCarga CPU: "
                 + str(carga_cpu)
             )
@@ -89,15 +115,13 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 def profiler(pid, results_file, print_info, detener_evento):
     """
     Ejecuta py-spy record repetidamente sobre un proceso existente.
-
-    Esta versión es más estable en Windows que py-spy top.
+    Genera archivos SVG flamegraph.
     """
 
     try:
 
         proceso_psutil = Process(pid)
 
-        # Inicializar medición CPU
         proceso_psutil.cpu_percent(interval=None)
 
         while not detener_evento.is_set():
@@ -111,11 +135,11 @@ def profiler(pid, results_file, print_info, detener_evento):
             cpu_total = cpu_percent(interval=None)
             cpu_nucleos = cpu_percent(interval=None, percpu=True)
 
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            timestamp = obtener_fecha_hora_actual().strftime("%Y-%m-%d_%H-%M-%S")
 
             archivo_pyspy = path.join(
                 LOGS_DIR,
-                f"pyspy_record_{timestamp}.txt"
+                f"pyspy_record_{timestamp}.svg"
             )
 
             cmd = [
@@ -128,7 +152,7 @@ def profiler(pid, results_file, print_info, detener_evento):
                 "--rate",
                 "10",
                 "--format",
-                "raw",
+                "flamegraph",
                 "--output",
                 archivo_pyspy,
             ]
@@ -148,38 +172,17 @@ def profiler(pid, results_file, print_info, detener_evento):
                 salida = "ERROR: Timeout ejecutando py-spy record.\n"
 
             separador = "=" * 80
+            timestamp_muestra = obtener_timestamp_csv()
 
             results_file.write("\n")
             results_file.write(separador + "\n")
-            results_file.write(
-                f"Muestra tomada en: "
-                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4]}\n"
-            )
-
-            results_file.write(
-                f"CPU del proceso PID {pid}: "
-                f"{cpu_proceso:.2f}%\n"
-            )
-
-            results_file.write(
-                f"CPU total del sistema: "
-                f"{cpu_total:.2f}%\n"
-            )
-
-            results_file.write(
-                f"CPU por núcleo: "
-                f"{cpu_nucleos}\n"
-            )
-
+            results_file.write(f"Muestra tomada en: {timestamp_muestra}\n")
+            results_file.write(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%\n")
+            results_file.write(f"CPU total del sistema: {cpu_total:.2f}%\n")
+            results_file.write(f"CPU por núcleo: {cpu_nucleos}\n")
             results_file.write(separador + "\n")
-
-            results_file.write(
-                f"Archivo py-spy generado:\n"
-            )
-
-            results_file.write(
-                f"{archivo_pyspy}\n\n"
-            )
+            results_file.write("Archivo py-spy flamegraph generado:\n")
+            results_file.write(f"{archivo_pyspy}\n\n")
 
             if salida:
                 results_file.write(salida + "\n")
@@ -189,32 +192,11 @@ def profiler(pid, results_file, print_info, detener_evento):
             if print_info:
 
                 print(separador)
-
-                print(
-                    f"Muestra tomada en: "
-                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4]}"
-                )
-
-                print(
-                    f"CPU del proceso PID {pid}: "
-                    f"{cpu_proceso:.2f}%"
-                )
-
-                print(
-                    f"CPU total del sistema: "
-                    f"{cpu_total:.2f}%"
-                )
-
-                print(
-                    f"CPU por núcleo: "
-                    f"{cpu_nucleos}"
-                )
-
-                print(
-                    f"Archivo py-spy generado: "
-                    f"{archivo_pyspy}"
-                )
-
+                print(f"Muestra tomada en: {timestamp_muestra}")
+                print(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%")
+                print(f"CPU total del sistema: {cpu_total:.2f}%")
+                print(f"CPU por núcleo: {cpu_nucleos}")
+                print(f"Archivo py-spy flamegraph generado: {archivo_pyspy}")
                 print(separador)
 
                 if salida:
@@ -228,13 +210,8 @@ def profiler(pid, results_file, print_info, detener_evento):
             "ERROR: py-spy no está instalado o no está en el PATH.\n"
         )
 
-        results_file.write(
-            "Instale py-spy utilizando:\n"
-        )
-
-        results_file.write(
-            "python -m pip install py-spy\n"
-        )
+        results_file.write("Instale py-spy utilizando:\n")
+        results_file.write("python -m pip install py-spy\n")
 
         print("ERROR: py-spy no está instalado o no está en el PATH.")
 
@@ -325,6 +302,8 @@ if __name__ == "__main__":
     print(f"PID analizado: {pid}")
     print(f"Archivo CPU: {csv_filename_cores}")
     print(f"Archivo perfilado: {filename}")
+
+    abrir_pyspy_top(pid)
 
     with open(filename, mode="w", encoding="utf-8") as results_file:
 
