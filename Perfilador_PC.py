@@ -2,6 +2,7 @@
 # Refactorizado de Proyecto eBridge por Randy Cespedes <rscd27p - rcespedes27dds@gmail.com>
 # Adaptado para versiones recientes de py-spy
 # Diseñado para computadoras personales o máquinas virtuales con Windows
+# Adaptado para usar py-spy record en lugar de py-spy top
 
 import sys
 import csv
@@ -87,17 +88,16 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
 def profiler(pid, results_file, print_info, detener_evento):
     """
-    Ejecuta py-spy top repetidamente sobre un proceso existente.
+    Ejecuta py-spy record repetidamente sobre un proceso existente.
 
-    Esta versión permite mostrar las funciones donde el programa
-    pasa más tiempo durante la ejecución.
+    Esta versión es más estable en Windows que py-spy top.
     """
 
     try:
 
         proceso_psutil = Process(pid)
 
-        # Inicializar medición de CPU del proceso
+        # Inicializar medición CPU
         proceso_psutil.cpu_percent(interval=None)
 
         while not detener_evento.is_set():
@@ -111,13 +111,26 @@ def profiler(pid, results_file, print_info, detener_evento):
             cpu_total = cpu_percent(interval=None)
             cpu_nucleos = cpu_percent(interval=None, percpu=True)
 
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+            archivo_pyspy = path.join(
+                LOGS_DIR,
+                f"pyspy_record_{timestamp}.txt"
+            )
+
             cmd = [
                 "py-spy",
-                "top",
+                "record",
                 "--pid",
                 str(pid),
+                "--duration",
+                "5",
                 "--rate",
                 "10",
+                "--format",
+                "raw",
+                "--output",
+                archivo_pyspy,
             ]
 
             proceso = subprocess.Popen(
@@ -128,38 +141,83 @@ def profiler(pid, results_file, print_info, detener_evento):
             )
 
             try:
-                sleep(2)
-                proceso.terminate()
-                salida, _ = proceso.communicate(timeout=5)
+                salida, _ = proceso.communicate(timeout=10)
 
             except subprocess.TimeoutExpired:
                 proceso.kill()
-                salida = "ERROR: Timeout ejecutando py-spy top.\n"
+                salida = "ERROR: Timeout ejecutando py-spy record.\n"
+
+            separador = "=" * 80
+
+            results_file.write("\n")
+            results_file.write(separador + "\n")
+            results_file.write(
+                f"Muestra tomada en: "
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4]}\n"
+            )
+
+            results_file.write(
+                f"CPU del proceso PID {pid}: "
+                f"{cpu_proceso:.2f}%\n"
+            )
+
+            results_file.write(
+                f"CPU total del sistema: "
+                f"{cpu_total:.2f}%\n"
+            )
+
+            results_file.write(
+                f"CPU por núcleo: "
+                f"{cpu_nucleos}\n"
+            )
+
+            results_file.write(separador + "\n")
+
+            results_file.write(
+                f"Archivo py-spy generado:\n"
+            )
+
+            results_file.write(
+                f"{archivo_pyspy}\n\n"
+            )
 
             if salida:
-
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]
-
-                separador = "=" * 80
-
-                results_file.write("\n")
-                results_file.write(separador + "\n")
-                results_file.write(f"Muestra tomada en: {timestamp}\n")
-                results_file.write(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%\n")
-                results_file.write(f"CPU total del sistema: {cpu_total:.2f}%\n")
-                results_file.write(f"CPU por núcleo: {cpu_nucleos}\n")
-                results_file.write(separador + "\n")
                 results_file.write(salida + "\n")
 
-                results_file.flush()
+            results_file.flush()
 
-                if print_info:
-                    print(separador)
-                    print(f"Muestra tomada en: {timestamp}")
-                    print(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%")
-                    print(f"CPU total del sistema: {cpu_total:.2f}%")
-                    print(f"CPU por núcleo: {cpu_nucleos}")
-                    print(separador)
+            if print_info:
+
+                print(separador)
+
+                print(
+                    f"Muestra tomada en: "
+                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4]}"
+                )
+
+                print(
+                    f"CPU del proceso PID {pid}: "
+                    f"{cpu_proceso:.2f}%"
+                )
+
+                print(
+                    f"CPU total del sistema: "
+                    f"{cpu_total:.2f}%"
+                )
+
+                print(
+                    f"CPU por núcleo: "
+                    f"{cpu_nucleos}"
+                )
+
+                print(
+                    f"Archivo py-spy generado: "
+                    f"{archivo_pyspy}"
+                )
+
+                print(separador)
+
+                if salida:
                     print(salida)
 
             sleep(0.5)
