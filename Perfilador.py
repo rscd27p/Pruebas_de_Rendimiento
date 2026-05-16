@@ -1,7 +1,7 @@
-# Perfilador de CPU y de línea para Python
+# Perfilador de CPU y de línea para Python en Raspberry PI / Linux
 # Refactorizado de Proyecto eBridge por Randy Cespedes <rscd27p - rcespedes27dds@gmail.com>
 # Adaptado para versiones recientes de py-spy
-# Detiene automáticamente el perfilado cuando finaliza el proceso monitoreado.
+# Mantiene py-spy top para Raspberry PI y detiene automáticamente cuando finaliza el proceso monitoreado.
 
 import sys
 import csv
@@ -25,12 +25,12 @@ def crear_directorio_logs():
 
 def generar_nombre_archivo_cpu():
     fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    return path.join(LOGS_DIR, f"log_cpu_{fecha}.csv")
+    return path.join(LOGS_DIR, f"log_cpu_rpi_{fecha}.csv")
 
 
 def generar_nombre_archivo_perfilado():
     fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    return path.join(LOGS_DIR, f"Resultado_de_Perfilado_{fecha}.txt")
+    return path.join(LOGS_DIR, f"Resultado_de_Perfilado_RPI_{fecha}.txt")
 
 
 def cpu_analyze(csv_filename_cores, detener_evento, pid):
@@ -42,12 +42,13 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
         writer.writerow(
             ["Time"] + [f"Core_{n}" for n in range(1, cpu_count(logical=True) + 1)]
         )
+
         file.flush()
 
         while not detener_evento.is_set():
 
             if not pid_exists(pid):
-                print("El proceso monitoreado terminó. Deteniendo análisis de CPU...")
+                print("El proceso monitoreado terminó.")
                 detener_evento.set()
                 break
 
@@ -56,6 +57,7 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
             writer.writerow(
                 [datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]] + carga_cpu
             )
+
             file.flush()
 
             elapsed_time = time.time() - start_time
@@ -72,6 +74,13 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
 
 def profiler(pid, results_file, print_info, detener_evento):
+    """
+    Ejecuta py-spy top sobre un proceso existente.
+
+    En Raspberry PI / Linux, py-spy top normalmente funciona mejor que en Windows.
+    Si aparece error de permisos, ejecute este script con sudo.
+    """
+
     cmd = [
         "py-spy",
         "top",
@@ -97,6 +106,7 @@ def profiler(pid, results_file, print_info, detener_evento):
                 break
 
             if not pid_exists(pid):
+                print("El proceso monitoreado finalizó.")
                 detener_evento.set()
                 break
 
@@ -122,6 +132,14 @@ def profiler(pid, results_file, print_info, detener_evento):
         results_file.write("Instale py-spy con:\n")
         results_file.write("python -m pip install py-spy\n")
         print("ERROR: py-spy no está instalado o no está en el PATH.")
+        detener_evento.set()
+
+    except PermissionError:
+        results_file.write("ERROR: Permisos insuficientes para ejecutar py-spy.\n")
+        results_file.write("En Raspberry PI / Linux intente ejecutar:\n")
+        results_file.write("sudo python Perfilador.py <PID> True\n")
+        print("ERROR: Permisos insuficientes para ejecutar py-spy.")
+        print("Intente ejecutar el comando con sudo.")
         detener_evento.set()
 
     except KeyboardInterrupt:
@@ -152,11 +170,16 @@ def mostrar_uso():
     print("Ejemplo:")
     print("    python Perfilador.py 5251 True")
     print()
+    print("Descripción:")
+    print("    True  -> imprime resultados en consola y guarda archivos")
+    print("    False -> solo guarda archivos en Logs")
+    print()
     print("En Raspberry PI, si hay error de permisos, use:")
     print("    sudo python Perfilador.py 5251 True")
 
 
 if __name__ == "__main__":
+
     crear_directorio_logs()
 
     if len(sys.argv) < 3:
@@ -165,6 +188,7 @@ if __name__ == "__main__":
 
     try:
         pid = int(sys.argv[1])
+
     except ValueError:
         print("ERROR: El PID debe ser un número entero.")
         mostrar_uso()
@@ -182,12 +206,13 @@ if __name__ == "__main__":
 
     detener_evento = Event()
 
-    print("Iniciando perfilador...")
+    print("Iniciando perfilador para Raspberry PI / Linux...")
     print(f"PID analizado: {pid}")
     print(f"Archivo CPU: {csv_filename_cores}")
     print(f"Archivo perfilado: {filename}")
 
     with open(filename, mode="w", encoding="utf-8") as results_file:
+
         cores_analyzer = Thread(
             target=cpu_analyze,
             args=(csv_filename_cores, detener_evento, pid),
@@ -202,7 +227,9 @@ if __name__ == "__main__":
         profiler_analyzer.start()
 
         profiler_analyzer.join()
+
         detener_evento.set()
+
         cores_analyzer.join()
 
     print("Perfilado finalizado.")
