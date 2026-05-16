@@ -1,114 +1,504 @@
 # Pruebas_de_Rendimiento
 
-Este es el repositorio del curso para realizar pruebas de Validación de Sistemas Embebidos TSEV-008 del programa de Técnico en Sistemas Embebidos de la Universidad Fidélitas.
+Este repositorio contiene los programas, herramientas e instrucciones necesarias para realizar pruebas de rendimiento como parte del curso de **Validación de Sistemas Embebidos TSEV-008** del programa de Técnico en Sistemas Embebidos de la Universidad Fidélitas.
+
+El objetivo principal de este material es que el estudiante pueda ejecutar programas que generen consumo de CPU y memoria, observar el comportamiento del sistema mientras se ejecutan y generar evidencias que puedan ser utilizadas en los reportes del curso.
+
+Este README contempla dos escenarios de trabajo:
+
+1. Estudiantes que cuentan con un **Raspberry PI físico**.
+2. Estudiantes que trabajan desde una **computadora personal**, **Windows** o una **máquina virtual**.
+
+Ambos escenarios son válidos, pero los comandos cambian dependiendo de la plataforma utilizada. Por esta razón, es importante leer primero la sección de selección de plataforma.
+
+---
+
+## Tabla de Contenidos
+
+- [Pruebas_de_Rendimiento](#pruebas_de_rendimiento)
+  - [Tabla de Contenidos](#tabla-de-contenidos)
+  - [Configurando RPI](#configurando-rpi)
+  - [Nomenclatura de Consolas](#nomenclatura-de-consolas)
+  - [Importante - Selección de Plataforma](#importante---selección-de-plataforma)
+    - [Si usted tiene un Raspberry PI físico](#si-usted-tiene-un-raspberry-pi-físico)
+    - [Si usted utiliza una máquina virtual o Windows](#si-usted-utiliza-una-máquina-virtual-o-windows)
+  - [Estructura del Repositorio](#estructura-del-repositorio)
+  - [Instalación de Bibliotecas](#instalación-de-bibliotecas)
+    - [Instalación en Raspberry PI](#instalación-en-raspberry-pi)
+    - [Instalación en Windows](#instalación-en-windows)
+  - [Uso de Scalene en Raspberry PI](#uso-de-scalene-en-raspberry-pi)
+    - [Verificar versión de Scalene](#verificar-versión-de-scalene)
+    - [Perfilado en consola en Raspberry PI](#perfilado-en-consola-en-raspberry-pi)
+    - [Generar perfil guardado en Raspberry PI](#generar-perfil-guardado-en-raspberry-pi)
+    - [Ver reporte guardado en consola en Raspberry PI](#ver-reporte-guardado-en-consola-en-raspberry-pi)
+    - [Ver reporte HTML en Raspberry PI](#ver-reporte-html-en-raspberry-pi)
+    - [Reporte JSON en Raspberry PI](#reporte-json-en-raspberry-pi)
+  - [Uso de Perfilador en Raspberry PI](#uso-de-perfilador-en-raspberry-pi)
+    - [Paso 1 - Ejecutar el programa a perfilar](#paso-1---ejecutar-el-programa-a-perfilar)
+    - [Paso 2 - Copiar el PID del proceso](#paso-2---copiar-el-pid-del-proceso)
+    - [Paso 3 - Ejecutar Perfilador.py](#paso-3---ejecutar-perfiladorpy)
+    - [Paso 4 - Continuar el programa principal](#paso-4---continuar-el-programa-principal)
+    - [Paso 5 - Revisar resultados](#paso-5---revisar-resultados)
+  - [Uso de Scalene en PC Windows](#uso-de-scalene-en-pc-windows)
+    - [Verificar versión de Scalene en Windows](#verificar-versión-de-scalene-en-windows)
+    - [Perfilado en consola en Windows](#perfilado-en-consola-en-windows)
+    - [Generar perfil guardado en Windows](#generar-perfil-guardado-en-windows)
+    - [Ver reporte guardado en consola en Windows](#ver-reporte-guardado-en-consola-en-windows)
+    - [Ver reporte HTML en Windows](#ver-reporte-html-en-windows)
+    - [Reporte JSON en Windows](#reporte-json-en-windows)
+  - [Uso de Perfilador en PC Windows](#uso-de-perfilador-en-pc-windows)
+    - [Paso 1 - Ejecutar el programa en Windows](#paso-1---ejecutar-el-programa-en-windows)
+    - [Paso 2 - Copiar el PID del proceso en Windows](#paso-2---copiar-el-pid-del-proceso-en-windows)
+    - [Paso 3 - Ejecutar Perfilador_PC.py](#paso-3---ejecutar-perfilador_pcpy)
+    - [Paso 4 - Continuar el programa principal](#paso-4---continuar-el-programa-principal-1)
+    - [Paso 5 - Revisar resultados en Windows](#paso-5---revisar-resultados-en-windows)
+  - [Procesado de Datos](#procesado-de-datos)
+  - [Programas a Correr](#programas-a-correr)
+    - [Nota Importante para Windows o Máquina Virtual](#nota-importante-para-windows-o-máquina-virtual)
+    - [Alto_CPU.py](#alto_cpupy)
+    - [Multiples_hilos_starvation.py](#multiples_hilos_starvationpy)
+    - [Alto_Memoria.py](#alto_memoriapy)
+  - [Uso de Sleep](#uso-de-sleep)
+  - [Errores Comunes y Soluciones](#errores-comunes-y-soluciones)
+  - [Recomendaciones Finales](#recomendaciones-finales)
+
+---
 
 ## Configurando RPI
 
-Siga las instrucciones en el repositorio de la Máquina de Café [Proyecto final del curso] para configurar su RPI.
+Siga las instrucciones en el repositorio de la Máquina de Café para configurar su Raspberry PI.
 
 1. [Configurar RPI](https://github.com/rscd27p/Maquina_de_Cafe/blob/main/Documentos/Configurar_RPI.md)
 2. [Sección - Instalación de Software en Raspberry PI](https://github.com/rscd27p/Maquina_de_Cafe/tree/main)
 3. [Real VNC](https://github.com/rscd27p/Maquina_de_Cafe/blob/main/Documentos/RealVNC.md)
 
-**Nota Importante:**  Se usa la misma nomenclatura para las consolas del Host y del RPI.
+Estas guías permiten preparar el Raspberry PI con el sistema operativo, herramientas de acceso remoto y ambiente de trabajo necesario para las prácticas.
 
-En el caso de la consola que corre en la computadora personal de Windows va a ser identificada de la siguiente forma:
+> **Nota:** Si usted no cuenta con un Raspberry PI físico, puede continuar con las secciones de Windows o máquina virtual. No debe intentar ejecutar comandos de Raspberry PI si está trabajando desde Windows.
 
-```
-C:\ <Comando> --parametro-1 --parametro-2
-```
-La consola en el RPI se identifica como:
-# Pruebas_de_Rendimiento
+---
 
-Este es el repositorio del curso para realizar pruebas de Validación de Sistemas Embebidos TSEV-008 del programa de Técnico en Sistemas Embebidos de la Universidad Fidélitas.
+## Nomenclatura de Consolas
 
-## Configurando RPI
+Para evitar confusiones, este documento utiliza una nomenclatura diferente para identificar dónde debe ejecutarse cada comando.
 
-Siga las instrucciones en el repositorio de la Máquina de Café [Proyecto final del curso] para configurar su RPI.
-
-1. [Configurar RPI](https://github.com/rscd27p/Maquina_de_Cafe/blob/main/Documentos/Configurar_RPI.md)
-2. [Sección - Instalación de Software en Raspberry PI](https://github.com/rscd27p/Maquina_de_Cafe/tree/main)
-3. [Real VNC](https://github.com/rscd27p/Maquina_de_Cafe/blob/main/Documentos/RealVNC.md)
-
-**Nota Importante:** Se usa la misma nomenclatura para las consolas del Host y del RPI.
-
-En el caso de la consola que corre en la computadora personal de Windows va a ser identificada de la siguiente forma:
+En el caso de la consola que corre en la computadora personal de Windows, los comandos se identifican de la siguiente forma:
 
 ```bash
 C:\ <Comando> --parametro-1 --parametro-2
 ```
 
-La consola en el RPI se identifica como:
+La consola normal del Raspberry PI se identifica como:
 
 ```bash
 ~S <Comando> --parametro-1 --parametro-2
 ```
 
-Para el ambiente "Fidelitas" en el RPI:
+Para el ambiente virtual `Fidelitas` en el Raspberry PI, la consola se identifica como:
 
 ```bash
 (.Fidelitas) ~S <Comando> --parametro-1 --parametro-2
 ```
 
-### Instalación de Bibliotecas
+> **Nota:** No copie literalmente `C:\` o `(.Fidelitas) ~S` si su consola no lo requiere. Estos prefijos se utilizan para indicar en qué plataforma debe ejecutarse el comando.
 
-Adicional a esto se utilizarán las siguientes bibliotecas como parte del Ambiente Virtual llamado "Fidelitas" creado en la sección de instalación de software. Para esto ejecute los siguientes comandos.
+---
 
-**Nota:** Vaya a la ubicación donde está el ambiente virtual de Fidelitas en su Raspberry PI, por ejemplo, por defecto en la guía se instaló en root.
+# Importante - Selección de Plataforma
+
+Antes de ejecutar cualquier comando, el estudiante debe identificar cuál ambiente está utilizando.
+
+Este repositorio está preparado para dos tipos de estudiantes:
+
+- Estudiantes con Raspberry PI físico.
+- Estudiantes sin Raspberry PI físico, que trabajan con Windows, una computadora personal o una máquina virtual.
+
+La selección correcta de la plataforma es importante porque:
+
+- Los comandos de rutas cambian entre Linux/Raspberry PI y Windows.
+- El perfilador del Raspberry PI no es el mismo que el perfilador de Windows.
+- El consumo de CPU y memoria puede variar mucho entre una PC y un Raspberry PI.
+- Una PC normalmente ejecuta los programas más rápido, por lo que puede ser necesario aumentar los ciclos.
+
+---
+
+## Si usted tiene un Raspberry PI físico
+
+Debe utilizar principalmente las siguientes secciones:
+
+- [Uso de Scalene en Raspberry PI](#uso-de-scalene-en-raspberry-pi)
+- [Uso de Perfilador en Raspberry PI](#uso-de-perfilador-en-raspberry-pi)
+
+Estas secciones fueron diseñadas para ejecutarse directamente en el Raspberry PI utilizando el ambiente virtual `Fidelitas`.
+
+Los comandos se verán de esta forma:
+
+```bash
+(.Fidelitas) ~S python programa.py
+```
+
+### Recomendaciones para estudiantes con Raspberry PI físico
+
+1. Verifique que el Raspberry PI esté encendido.
+2. Verifique que tenga conexión de red.
+3. Active el ambiente virtual `Fidelitas`.
+4. Ejecute los comandos dentro del repositorio `Pruebas_de_Rendimiento`.
+5. Use las rutas con `/`, por ejemplo:
+
+```bash
+./Alto_Consumo_de_CPU/Alto_CPU.py
+```
+
+6. No utilice los comandos de Windows con `.\` si está trabajando en Raspberry PI.
+
+---
+
+## Si usted utiliza una máquina virtual o Windows
+
+Debe utilizar principalmente las siguientes secciones:
+
+- [Uso de Scalene en PC Windows](#uso-de-scalene-en-pc-windows)
+- [Uso de Perfilador en PC Windows](#uso-de-perfilador-en-pc-windows)
+
+Estas instrucciones están pensadas para estudiantes que no tienen un Raspberry PI físico o que deben ejecutar las pruebas desde una computadora personal.
+
+Los comandos se verán de esta forma:
+
+```bash
+C:\ python programa.py
+```
+
+### Recomendaciones para estudiantes con Windows o máquina virtual
+
+1. Abra `CMD` o `PowerShell`.
+2. Navegue hasta la raíz del repositorio `Pruebas_de_Rendimiento`.
+3. Ejecute los comandos desde la raíz del proyecto.
+4. Use las rutas con `\`, por ejemplo:
+
+```bash
+.\Alto_Consumo_de_CPU\Alto_CPU.py
+```
+
+5. Utilice el perfilador de Windows llamado `Perfilador_PC.py`.
+6. Si el programa termina demasiado rápido, aumente el número de ciclos.
+
+---
+
+# Estructura del Repositorio
+
+Los archivos principales se encuentran distribuidos de la siguiente forma.
+
+En la raíz del repositorio `Pruebas_de_Rendimiento` se encuentran:
+
+```text
+Perfilador.py
+Perfilador_PC.py
+README.md
+```
+
+El perfilador para Raspberry PI es:
+
+```text
+Perfilador.py
+```
+
+El perfilador para Windows es:
+
+```text
+Perfilador_PC.py
+```
+
+Los programas de prueba se encuentran en los siguientes folders:
+
+```text
+./Alto_Consumo_de_CPU/
+./Alto_Consumo_de_Memoria/
+```
+
+Por ejemplo:
+
+```text
+./Alto_Consumo_de_CPU/Alto_CPU.py
+./Alto_Consumo_de_CPU/Multiples_hilos_starvation.py
+./Alto_Consumo_de_Memoria/Alto_Memoria.py
+```
+
+En Windows, según la imagen de referencia del repositorio, `Perfilador_PC.py` se encuentra en la raíz del proyecto, al mismo nivel que `Perfilador.py` y `README.md`. Por esta razón, el comando correcto para Windows es:
+
+```bash
+C:\ python Perfilador_PC.py <PID> True
+```
+
+y no debe ejecutarse como si estuviera dentro de otro folder.
+
+---
+
+# Instalación de Bibliotecas
+
+## Instalación en Raspberry PI
+
+Adicional a esto se utilizarán las siguientes bibliotecas como parte del ambiente virtual llamado `Fidelitas`.
+
+**Nota:** Vaya a la ubicación donde está el ambiente virtual de Fidelitas en su Raspberry PI. Por defecto, en la guía se instaló en root.
 
 ```bash
 (.Fidelitas) ~S python -m pip install py-spy scalene
 ```
 
----
-
-## Uso de Scalene
-
-Puede usar Scalene con el siguiente comando:
+Puede verificar que Scalene quedó instalado con:
 
 ```bash
-(.Fidelitas) ~S python -m scalene --cpu --memory --cli <nombre_de_programa> <argumentos del programa>
+(.Fidelitas) ~S python -m scalene --version
 ```
 
-Al final de este documento en la sección [Programas a Correr](#programas-a-correr) se pueden encontrar las instrucciones para usar el script [Alto_CPU.py](./Alto_Consumo_de_CPU/Alto_CPU.py), el cual se podría perfilar con Scalene de la siguiente forma:
+Si el comando anterior muestra la versión de Scalene, entonces la instalación fue correcta.
+
+---
+
+## Instalación en Windows
+
+En Windows, abra una consola de `CMD` o `PowerShell` en la raíz del repositorio.
+
+Ejecute:
 
 ```bash
-(.Fidelitas) ~S python -m scalene --cpu --memory --cli ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
+pip install py-spy psutil pandas scalene
+```
+
+También puede instalar solo Scalene con:
+
+```bash
+pip install scalene
+```
+
+Puede verificar la instalación con:
+
+```bash
+python -m scalene --version
+```
+
+Si aparece la versión de Scalene, la instalación fue correcta.
+
+> **Nota:** Si Windows indica que `pip` no se reconoce como comando, intente usar:
+
+```bash
+python -m pip install py-spy psutil pandas scalene
+```
+
+---
+
+# Uso de Scalene en Raspberry PI
+
+Scalene es una herramienta de perfilado para programas de Python. Permite identificar qué partes del código consumen más CPU y memoria.
+
+Scalene puede generar diferentes tipos de salida:
+
+- Reporte directamente en consola.
+- Reporte guardado en archivo JSON.
+- Reporte HTML para abrir en navegador.
+- Visualización posterior de resultados guardados.
+
+---
+
+## Nota sobre la versión nueva de Scalene
+
+La versión nueva de Scalene cambió la forma de ejecutar los comandos.
+
+Antes se usaba una sintaxis como:
+
+```bash
+python -m scalene --cpu --memory --cli programa.py
+```
+
+Sin embargo, en versiones nuevas esto puede generar errores como:
+
+```text
+ambiguous option: --cpu could match --cpu-only, --cpu-percent-threshold, --cpu-sampling-rate
+```
+
+Por esta razón, en este README se utiliza la sintaxis nueva:
+
+```bash
+python -m scalene run
+```
+
+y para visualizar resultados guardados:
+
+```bash
+python -m scalene view
+```
+
+> **Nota importante:** En Scalene 2.x ya no es necesario agregar `--cpu --memory` para las pruebas básicas. Scalene perfila automáticamente la información necesaria.
+
+---
+
+## Verificar versión de Scalene
+
+En Raspberry PI, ejecute:
+
+```bash
+(.Fidelitas) ~S python -m scalene --version
+```
+
+Esto debería mostrar una salida similar a:
+
+```text
+Scalene: a high-precision CPU and memory profiler
+```
+
+---
+
+## Perfilado en consola en Raspberry PI
+
+Para ejecutar un programa y ver el reporte directamente en consola, utilice:
+
+```bash
+(.Fidelitas) ~S python -m scalene run --cli ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
+```
+
+También puede usar el comando directo si está disponible:
+
+```bash
+(.Fidelitas) ~S scalene run --cli ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
 ```
 
 El resultado se verá de esta forma:
 
 ![Resultados_Scalene_CLI](./imgs/Resultados-Scalene-CLI.png)
 
-Esto significa que el programa hizo 1 000 000 de ejecuciones. Como se puede ver en el reporte, la línea de código 14 representó el 99 % [83% + 16%] del tiempo de ejecución y no hubo consumo significativo de memoria.
+### Explicación del comando
 
-En caso de usar el argumento `--cli` de Scalene se generará una salida del programa en la consola. Para generar un archivo `.html` se puede usar el comando `--html` o para generar una salida en formato JSON se puede usar `--json`.
+```bash
+python -m scalene
+```
 
-Puede abrir el archivo `profile.html`, el cual se verá de la siguiente forma:
+Ejecuta Scalene como módulo de Python.
+
+```bash
+run
+```
+
+Indica que se desea perfilar un programa.
+
+```bash
+--cli
+```
+
+Indica que el resultado debe mostrarse en la consola.
+
+```bash
+./Alto_Consumo_de_CPU/Alto_CPU.py
+```
+
+Es el programa que se desea perfilar.
+
+```bash
+1000000
+```
+
+Es el argumento enviado al programa. En este caso representa la cantidad de operaciones o ciclos.
+
+---
+
+## Generar perfil guardado en Raspberry PI
+
+Si desea guardar el perfilado para revisarlo después, ejecute:
+
+```bash
+(.Fidelitas) ~S python -m scalene run ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
+```
+
+Esto genera un archivo llamado:
+
+```text
+scalene-profile.json
+```
+
+Este archivo contiene la información del perfilado.
+
+---
+
+## Ver reporte guardado en consola en Raspberry PI
+
+Después de generar `scalene-profile.json`, puede ver el reporte en consola con:
+
+```bash
+(.Fidelitas) ~S python -m scalene view --cli
+```
+
+Este comando no vuelve a ejecutar el programa. Solamente abre el perfil guardado.
+
+---
+
+## Ver reporte HTML en Raspberry PI
+
+Después de generar el archivo `scalene-profile.json`, puede abrir el reporte HTML con:
+
+```bash
+(.Fidelitas) ~S python -m scalene view --html
+```
+
+El reporte HTML permite revisar los resultados de forma más visual desde el navegador.
+
+Puede abrir el archivo **profile.html**, el cual se verá de la siguiente forma:
 
 ![Resultados_Scalene_HTML](./imgs/Resultados-Scalene-HTML.png)
 
 ---
 
-## Uso de Perfilador
+## Reporte JSON en Raspberry PI
 
-Se adjunta una herramienta de perfilado sencilla escrita en Python que utiliza el módulo [py-spy](https://github.com/benfred/py-spy), que hace perfilado de línea igual que Scalene, y la herramienta [top](https://www.geeksforgeeks.org/top-command-in-linux-with-examples/).
-
-El perfilador se llama [Perfilador.py](Perfilador.py) y se usa de la siguiente forma:
+Con la versión nueva de Scalene, el archivo JSON se genera automáticamente al ejecutar:
 
 ```bash
-(.Fidelitas) ~S python Perfilador.py <PID_del_programa_a_perfilar> <"True" para generar un archivo>
+(.Fidelitas) ~S python -m scalene run ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
 ```
 
-Por ejemplo:
+El archivo generado por defecto será:
 
-1. Se corre el programa:
+```text
+scalene-profile.json
+```
+
+Este archivo puede conservarse como evidencia o utilizarse posteriormente con:
+
+```bash
+(.Fidelitas) ~S python -m scalene view --cli
+```
+
+o:
+
+```bash
+(.Fidelitas) ~S python -m scalene view --html
+```
+
+---
+
+# Uso de Perfilador en Raspberry PI
+
+Se adjunta una herramienta de perfilado sencilla escrita en Python que utiliza el módulo [py-spy](https://github.com/benfred/py-spy), que hace perfilado de línea similar a Scalene, y la herramienta [top](https://www.geeksforgeeks.org/top-command-in-linux-with-examples/).
+
+El perfilador para Raspberry PI se llama:
+
+```text
+Perfilador.py
+```
+
+Este archivo se encuentra en la raíz del repositorio.
+
+---
+
+## Paso 1 - Ejecutar el programa a perfilar
+
+Primero se debe ejecutar el programa que se desea analizar.
+
+Por ejemplo:
 
 ```bash
 (.Fidelitas) ~S python ./Alto_Consumo_de_CPU/Alto_CPU.py 10000000
 ```
 
-El programa mostrará el siguiente mensaje:
+El programa mostrará un mensaje similar al siguiente:
 
 ```text
 ------------ Bienvenido al programa para probar consumo de CPU ------------
@@ -116,15 +506,65 @@ El PID del proceso es: 5251 - Este puede ser usado por el perfilador
 Presione enter para continuar
 ```
 
-Antes de presionar ENTER abra otra consola en el mismo folder de **Pruebas_de_Rendimiento** y ejecute este comando usando el valor de PID impreso en la otra consola:
+---
+
+## Paso 2 - Copiar el PID del proceso
+
+El PID es el identificador del proceso.
+
+En el ejemplo anterior, el PID es:
+
+```text
+5251
+```
+
+Debe copiar ese número porque será utilizado por el perfilador.
+
+> **Nota:** Cada vez que ejecute el programa, el PID puede cambiar. No utilice siempre el mismo número.
+
+---
+
+## Paso 3 - Ejecutar Perfilador.py
+
+Antes de presionar ENTER en la consola del programa principal, abra otra consola en el mismo folder raíz de `Pruebas_de_Rendimiento`.
+
+Ejecute:
 
 ```bash
 (.Fidelitas) ~S python Perfilador.py 5251 True
 ```
 
-Una vez que empiece a correr, vuelva a la consola donde está corriendo el código de `Alto_CPU.py` y presione ENTER.
+Donde:
 
-El programa correrá y el perfilador terminará automáticamente cuando `Alto_CPU.py` finalice.
+```text
+5251
+```
+
+debe reemplazarse por el PID que mostró su programa.
+
+El valor:
+
+```text
+True
+```
+
+indica que se generará un archivo de resultados en el folder `Logs`.
+
+---
+
+## Paso 4 - Continuar el programa principal
+
+Una vez que el perfilador esté corriendo, vuelva a la primera consola donde está `Alto_CPU.py`.
+
+Luego presione ENTER.
+
+El programa continuará su ejecución y el perfilador comenzará a recopilar información.
+
+Cuando el programa termine, el perfilador también terminará automáticamente.
+
+---
+
+## Paso 5 - Revisar resultados
 
 Se verá de esta forma:
 
@@ -140,135 +580,183 @@ Los resultados se ven de la siguiente forma:
 ![Resultados_Perfilador_Logs_CPU](./imgs/Resultados-Perfilador-CPU.png)
 
 ---
-## Uso de Scalene en PC (Windows)
 
-En caso de no utilizar el Raspberry PI o si desea realizar las pruebas directamente desde una computadora personal con Windows, también es posible usar la herramienta **Scalene** desde la PC.
+# Uso de Scalene en PC Windows
 
-Scalene permite analizar:
+En caso de no utilizar el Raspberry PI físico, o si se está trabajando desde una máquina virtual o computadora personal con Windows, se debe utilizar esta sección.
 
-- Uso de CPU
-- Consumo de memoria
-- Líneas de código con mayor tiempo de ejecución
-- Generación de reportes HTML interactivos
+Scalene en Windows permite analizar:
 
-### Instalación de Scalene en Windows
+- Uso de CPU.
+- Consumo de memoria.
+- Líneas de código con mayor tiempo de ejecución.
+- Generación de reportes en consola.
+- Generación de reportes HTML.
+- Generación de reportes JSON.
 
-Abra una consola de Windows (`CMD` o `PowerShell`) y ejecute:
+---
 
-```bash
-pip install scalene
-```
+## Verificar versión de Scalene en Windows
 
-Puede verificar la instalación con:
+Desde la raíz del repositorio, ejecute:
 
 ```bash
 python -m scalene --version
 ```
 
----
-
-### Uso Básico de Scalene
-
-La sintaxis general es:
-
-```bash
-python -m scalene --cpu --memory --cli <nombre_del_programa.py> <argumentos>
-```
-
-Por ejemplo:
-
-```bash
-python -m scalene --cpu --memory --cli .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
-```
-
-Esto ejecutará el programa y mostrará el análisis directamente en la consola.
+Si la instalación fue correcta, debería aparecer la versión instalada.
 
 ---
 
-### Generar Reporte HTML
+## Perfilado en consola en Windows
 
-También es posible generar un reporte gráfico en formato HTML utilizando:
+La versión nueva de Scalene utiliza el comando `run`.
+
+Desde la raíz del repositorio `Pruebas_de_Rendimiento`, ejecute:
 
 ```bash
-python -m scalene --cpu --memory --html .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+C:\ python -m scalene run --cli .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
 ```
 
-Al finalizar se generará un archivo llamado:
+También puede ejecutarse de esta forma si el comando `scalene` está disponible en la terminal:
+
+```bash
+C:\ scalene run --cli .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+### Explicación del comando
+
+```bash
+python -m scalene
+```
+
+Ejecuta Scalene como módulo de Python.
+
+```bash
+run
+```
+
+Indica que se desea perfilar un programa.
+
+```bash
+--cli
+```
+
+Muestra el resultado directamente en consola.
+
+```bash
+.\Alto_Consumo_de_CPU\Alto_CPU.py
+```
+
+Indica la ruta del programa en Windows.
+
+```bash
+1000000
+```
+
+Indica la cantidad de ciclos u operaciones que ejecutará el programa.
+
+---
+
+## Generar perfil guardado en Windows
+
+Para ejecutar el perfilado y guardar el resultado:
+
+```bash
+C:\ python -m scalene run .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+Scalene guardará el resultado en el archivo:
 
 ```text
-profile.html
+scalene-profile.json
 ```
-
-Este archivo puede abrirse desde cualquier navegador web.
 
 ---
 
-### Generar Reporte JSON
+## Ver reporte guardado en consola en Windows
 
-Para exportar los resultados en formato JSON:
+Después de generar el archivo `scalene-profile.json`, ejecute:
 
 ```bash
-python -m scalene --cpu --memory --json .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+C:\ python -m scalene view --cli
 ```
+
+Este comando mostrará en consola el perfil guardado.
 
 ---
 
-### Ejemplo de Resultado
+## Ver reporte HTML en Windows
 
-Scalene mostrará información similar a:
+Para ver el reporte guardado en formato HTML:
+
+```bash
+C:\ python -m scalene view --html
+```
+
+Si desea hacerlo en dos pasos:
+
+```bash
+C:\ python -m scalene run .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+C:\ python -m scalene view --html
+```
+
+El reporte se abrirá en el navegador web.
+
+---
+
+## Reporte JSON en Windows
+
+Con la versión nueva de Scalene, el archivo JSON se genera automáticamente al ejecutar:
+
+```bash
+C:\ python -m scalene run .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+El archivo generado por defecto será:
 
 ```text
-Line 14: 95% CPU
-Line 18: 3% Memory
+scalene-profile.json
 ```
 
-Esto permite identificar qué líneas del programa consumen más recursos.
+Este archivo puede utilizarse luego con:
+
+```bash
+C:\ python -m scalene view --cli
+```
+
+o:
+
+```bash
+C:\ python -m scalene view --html
+```
 
 ---
 
-## Recomendaciones
+# Uso de Perfilador en PC Windows
 
-- Cierre programas innecesarios antes de realizar las pruebas.
-- Ejecute la terminal como administrador si aparecen errores de permisos.
-- No utilice aplicaciones pesadas durante el perfilado para evitar alterar los resultados.
-- Se recomienda usar el reporte HTML para visualizar mejor los resultados.
+En caso de que el estudiante esté utilizando una máquina virtual o computadora personal, debe utilizar el perfilador para PC.
 
----
+El perfilador para PC Windows se llama:
 
-## Compatibilidad
+```text
+Perfilador_PC.py
+```
 
-Scalene puede utilizarse tanto en:
+Este archivo se encuentra en la raíz del repositorio, al mismo nivel que:
 
-- Raspberry PI
-- Windows
-- Linux
-- macOS
-
-Por lo tanto, los mismos programas del repositorio pueden analizarse desde cualquiera de estas plataformas.
-
-## Uso de Perfilador en PC Windows
-
-En caso de que el perfilador del Raspberry PI no funcione correctamente, también se incluye una versión compatible con Windows llamada [Perfilador_PC.py](Perfilador_PC.py).
+```text
+Perfilador.py
+README.md
+```
 
 Esta herramienta funciona de forma similar al perfilador del RPI, utilizando las bibliotecas `py-spy` y `psutil` para obtener información de consumo de CPU y procesos desde la computadora personal.
 
-### Instalación de Bibliotecas en Windows
+---
 
-Abra una consola de Windows, ya sea `CMD` o `PowerShell`, y ejecute:
+## Paso 1 - Ejecutar el programa en Windows
 
-```bash
-pip install py-spy psutil pandas
-```
-
-### Uso del Perfilador
-
-La sintaxis es la siguiente:
-
-```bash
-C:\ python Perfilador_PC.py <PID_del_programa_a_perfilar> <"True" para generar archivo>
-```
-
-Por ejemplo, primero ejecute el programa a analizar:
+Primero ejecute el programa a analizar desde la raíz del repositorio:
 
 ```bash
 C:\ python .\Alto_Consumo_de_CPU\Alto_CPU.py 10000000
@@ -282,42 +770,73 @@ El PID del proceso es: 12540 - Este puede ser usado por el perfilador
 Presione enter para continuar
 ```
 
-Antes de presionar ENTER, abra otra consola en el mismo folder del proyecto y ejecute:
+---
+
+## Paso 2 - Copiar el PID del proceso en Windows
+
+El PID es el identificador del proceso.
+
+En el ejemplo anterior, el PID es:
+
+```text
+12540
+```
+
+Debe copiar ese número para usarlo con `Perfilador_PC.py`.
+
+> **Nota:** El PID cambia cada vez que se ejecuta el programa.
+
+---
+
+## Paso 3 - Ejecutar Perfilador_PC.py
+
+Antes de presionar ENTER en la consola del programa principal, abra otra consola en el mismo folder raíz del proyecto.
+
+Ejecute:
 
 ```bash
 C:\ python Perfilador_PC.py 12540 True
 ```
 
+Donde:
+
+```text
+12540
+```
+
+debe reemplazarse por el PID real mostrado por el programa.
+
+---
+
+## Paso 4 - Continuar el programa principal
+
 Una vez iniciado el perfilador, vuelva a la consola del programa principal y presione ENTER.
 
 El perfilador terminará automáticamente cuando el proceso monitoreado finalice.
 
-### Resultados
+---
 
-Los resultados se almacenarán en el folder `Logs`, igual que en la versión para Raspberry PI.
+## Paso 5 - Revisar resultados en Windows
+
+Los resultados se almacenarán en el folder:
+
+```text
+Logs
+```
 
 Los archivos generados pueden abrirse posteriormente en:
 
-- Microsoft Excel
-- LibreOffice Calc
-- Google Sheets
-
-### Recomendaciones
-
-- Ejecute la consola de Windows como administrador si `py-spy` presenta errores de permisos.
-- Cierre aplicaciones innecesarias para obtener resultados más precisos.
-- Si Windows Defender genera alertas sobre `py-spy`, permita temporalmente su ejecución.
-- Mantenga ambos scripts, `Perfilador_PC.py` y el programa a analizar, en el mismo folder del repositorio.
-
-### Nota Importante
-
-El comportamiento y formato de salida de `Perfilador_PC.py` es equivalente al utilizado en el Raspberry PI, por lo que los mismos procedimientos de análisis y generación de gráficos aplican para ambas plataformas.
+- Microsoft Excel.
+- LibreOffice Calc.
+- Google Sheets.
 
 ---
 
-## Procesado de Datos
+# Procesado de Datos
 
-El archivo se puede abrir en LibreOffice del RPI. Se recomienda darle formato a la columna A haciendo click derecho y seleccionando **Format Cell** o **Formato de Celdas** en español.
+El archivo se puede abrir en LibreOffice del RPI o en Excel si está trabajando desde Windows.
+
+Se recomienda darle formato a la columna A haciendo click derecho y seleccionando **Format Cell** o **Formato de Celdas** en español.
 
 ![click_derecho_tiempo](./imgs/Click_derecho_tiempo.png)
 ![Configuracion_Tiempo](./imgs/Formato%20Tiempo.png)
@@ -328,9 +847,19 @@ Se puede usar LibreOffice para graficar al ir a:
 Insert >> Chart
 ```
 
-Seleccione **X-Y (Scatter)** de tipo **Lines-Only**.
+Seleccione:
 
-Esto automáticamente generará un gráfico con los valores de CPU vs Tiempo, de la siguiente forma:
+```text
+X-Y (Scatter)
+```
+
+y el tipo:
+
+```text
+Lines-Only
+```
+
+Esto generará un gráfico con los valores de CPU vs Tiempo.
 
 ![Resultados_Perfilador_Logs_Chart](./imgs/Resultados-Perfilador-Logs-Chart.png)
 
@@ -350,51 +879,116 @@ Al hacer grande el gráfico se verá mejor.
 
 ---
 
-## Programas a Correr
+# Programas a Correr
 
-### 1. Alto_CPU.py
+Los programas de prueba se encuentran en:
+
+```text
+./Alto_Consumo_de_CPU/
+./Alto_Consumo_de_Memoria/
+```
+
+---
+
+## Nota Importante para Windows o Máquina Virtual
+
+Si las pruebas se ejecutan desde una computadora personal o máquina virtual, se recomienda aumentar la cantidad de ciclos u operaciones para visualizar mejor el comportamiento del consumo de CPU y memoria, ya que la PC normalmente tiene mayor capacidad de procesamiento que el Raspberry PI.
+
+Por ejemplo, si en Raspberry PI se utilizan:
+
+```bash
+1000000
+```
+
+en Windows se podrían utilizar valores mayores como:
+
+```bash
+10000000
+```
+
+o incluso:
+
+```bash
+100000000
+```
+
+dependiendo de la capacidad de la computadora.
+
+---
+
+## Alto_CPU.py
 
 [Alto_CPU.py](./Alto_Consumo_de_CPU/Alto_CPU.py)
 
-Se corre de la siguiente forma:
+Este programa permite generar carga de CPU.
+
+### Ejecución en Raspberry PI
 
 ```bash
 (.Fidelitas) ~S python ./Alto_Consumo_de_CPU/Alto_CPU.py 10000000
 ```
 
+### Ejecución en Windows
+
+```bash
+C:\ python .\Alto_Consumo_de_CPU\Alto_CPU.py 10000000
+```
+
 **Nota:** El `10000000` indica la cantidad de operaciones. Por favor ver la consigna de la semana 3 para verificar con qué valores se debe correr.
+
+En Windows o máquina virtual puede aumentar este número si el programa termina muy rápido.
 
 ---
 
-### 2. Multiples_hilos_starvation.py
+## Multiples_hilos_starvation.py
 
 [Multiples_hilos_starvation.py](./Alto_Consumo_de_CPU/Multiples_hilos_starvation.py)
 
-Se corre de la siguiente forma:
+Este programa permite generar carga de CPU utilizando múltiples hilos.
+
+### Ejecución en Raspberry PI
 
 ```bash
 (.Fidelitas) ~S python ./Alto_Consumo_de_CPU/Multiples_hilos_starvation.py 8 10000000
 ```
 
-**Nota:** El `8` indica la cantidad de hilos paralelos de ejecución y el `10000000` indica la cantidad de operaciones. Por favor ver la consigna de la semana 3 para verificar con qué valores se debe correr.
+### Ejecución en Windows
+
+```bash
+C:\ python .\Alto_Consumo_de_CPU\Multiples_hilos_starvation.py 8 10000000
+```
+
+**Nota:** El `8` indica la cantidad de hilos paralelos de ejecución y el `10000000` indica la cantidad de operaciones.
+
+En Windows o máquina virtual puede aumentar el segundo valor si el programa termina muy rápido.
 
 ---
 
-### 3. Alto_Memoria.py
+## Alto_Memoria.py
 
 [Alto_Memoria.py](./Alto_Consumo_de_Memoria/Alto_Memoria.py)
 
-Se corre de la siguiente forma:
+Este programa permite generar consumo de memoria.
+
+### Ejecución en Raspberry PI
 
 ```bash
 (.Fidelitas) ~S python ./Alto_Consumo_de_Memoria/Alto_Memoria.py 1000000
 ```
 
-**Nota:** El `1000000` indica la cantidad de valores a almacenar. Por favor ver la consigna de la semana 3 para verificar con qué valores se debe correr.
+### Ejecución en Windows
+
+```bash
+C:\ python .\Alto_Consumo_de_Memoria\Alto_Memoria.py 1000000
+```
+
+**Nota:** El `1000000` indica la cantidad de valores a almacenar.
+
+En Windows o máquina virtual puede aumentar este número si el programa termina muy rápido, siempre teniendo cuidado de no consumir demasiada memoria.
 
 ---
 
-## Uso de Sleep
+# Uso de Sleep
 
 ```python
 # Debe importar la siguiente librería en el código
@@ -409,3 +1003,102 @@ def guardar_numeros_random(cantidad: int = 1, num_random: list = []):
         time.sleep(0.001) # valor en segundos, el programa va a esperar 1 ms.
 ```
 
+El uso de `time.sleep()` permite introducir pausas controladas en el programa, lo cual puede ayudar a observar mejor el comportamiento del consumo de CPU o memoria durante una prueba.
+
+---
+
+# Errores Comunes y Soluciones
+
+## Error: ambiguous option --cpu
+
+Si Scalene muestra un error similar a:
+
+```text
+ambiguous option: --cpu could match --cpu-only, --cpu-percent-threshold, --cpu-sampling-rate
+```
+
+significa que está usando una versión nueva de Scalene y el comando viejo ya no es compatible.
+
+No utilice:
+
+```bash
+python -m scalene --cpu --memory --cli programa.py
+```
+
+Utilice:
+
+```bash
+python -m scalene run --cli programa.py
+```
+
+---
+
+## Error: el perfilador no encuentra el PID
+
+Verifique que:
+
+1. El programa principal siga abierto.
+2. No haya presionado ENTER antes de iniciar el perfilador.
+3. El PID copiado sea correcto.
+4. En Windows esté usando `Perfilador_PC.py`.
+5. En Raspberry PI esté usando `Perfilador.py`.
+
+---
+
+## Error: el comando scalene no se reconoce
+
+Si el comando:
+
+```bash
+scalene
+```
+
+no funciona, use:
+
+```bash
+python -m scalene
+```
+
+Por ejemplo:
+
+```bash
+python -m scalene run --cli .\Alto_Consumo_de_CPU\Alto_CPU.py 1000000
+```
+
+---
+
+## Error: el programa termina muy rápido
+
+Si el programa termina demasiado rápido y no se logra observar consumo de CPU o memoria, aumente el número de ciclos.
+
+Por ejemplo, en lugar de:
+
+```bash
+1000000
+```
+
+puede usar:
+
+```bash
+10000000
+```
+
+o:
+
+```bash
+100000000
+```
+
+---
+
+# Recomendaciones Finales
+
+- Ejecute siempre los comandos desde la raíz del repositorio.
+- Use `Perfilador.py` solamente en Raspberry PI.
+- Use `Perfilador_PC.py` solamente en Windows o máquina virtual.
+- Use la sintaxis nueva de Scalene con `run` y `view`.
+- No utilice `--cpu --memory` con la versión nueva de Scalene.
+- Guarde capturas de pantalla de los resultados.
+- Genere gráficos para evidenciar el comportamiento de CPU y memoria.
+- Revise el folder `Logs` después de ejecutar los perfiladores.
+- Si trabaja en PC, puede aumentar la cantidad de ciclos para obtener resultados más visibles.
