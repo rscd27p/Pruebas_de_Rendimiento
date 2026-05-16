@@ -353,13 +353,13 @@ Scalene: a high-precision CPU and memory profiler
 Para ejecutar un programa y ver el reporte directamente en consola, utilice:
 
 ```bash
-(.Fidelitas) ~S python -m scalene run --cli ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
+(.Fidelitas) ~S python -m scalene run --cli -- ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
 ```
 
 También puede usar el comando directo si está disponible:
 
 ```bash
-(.Fidelitas) ~S scalene run --cli ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
+(.Fidelitas) ~S scalene run --cli -- ./Alto_Consumo_de_CPU/Alto_CPU.py 1000000
 ```
 
 El resultado se verá de esta forma:
