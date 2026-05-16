@@ -1,66 +1,183 @@
 # Perfilador de CPU y de línea para Python
 # Refactorizado de Proyecto eBridge por Randy Cespedes <rscd27p - rcespedes27dds@gmail.com>
+# Adaptado para versiones recientes de py-spy
 
-# Importar Bibliotecas
 import sys
 import csv
 import subprocess
-from psutil import cpu_count, cpu_percent
-from os import getpid, path
+import time
+from os import path, makedirs
 from datetime import datetime
 from time import sleep
-from threading import Thread
-import time
+from threading import Thread, Event
 
-# Nombre de archivo
-csv_filename_cores = "Logs/log_cpu_" + datetime.now().strftime("%Y-%m-%d_%H-%M") + ".csv"
+from psutil import cpu_count, cpu_percent, pid_exists
 
-# Función para analizar CPU
-def cpu_analyze():
+
+LOGS_DIR = "Logs"
+
+
+def crear_directorio_logs():
+    if not path.exists(LOGS_DIR):
+        makedirs(LOGS_DIR)
+
+
+def generar_nombre_archivo_cpu():
+    fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    return path.join(LOGS_DIR, f"log_cpu_{fecha}.csv")
+
+
+def generar_nombre_archivo_perfilado():
+    fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    return path.join(LOGS_DIR, f"Resultado_de_Perfilado_{fecha}.txt")
+
+
+def cpu_analyze(csv_filename_cores, detener_evento):
     start_time = time.time()
-    with open(csv_filename_cores, 'w', newline='') as file:
+
+    with open(csv_filename_cores, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["Time"]+[str(n) for n in list(range(1, cpu_count(logical=True)+1))])
+
+        writer.writerow(
+            ["Time"] + [f"Core_{n}" for n in range(1, cpu_count(logical=True) + 1)]
+        )
+
         file.flush()
-        while(ANALIZAR):
-            y = cpu_percent(percpu=True)
-            writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]]+y)
+
+        while not detener_evento.is_set():
+            carga_cpu = cpu_percent(percpu=True)
+
+            writer.writerow(
+                [datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]] + carga_cpu
+            )
+
             file.flush()
-            elapsedtime = time.time() - start_time
-            print("Tiempo Transcurrido: " + str(elapsedtime) + " (s)" + "\nCarga CPU: " + str(y))
+
+            elapsed_time = time.time() - start_time
+
+            print(
+                "Tiempo Transcurrido: "
+                + str(round(elapsed_time, 2))
+                + " (s)"
+                + "\nCarga CPU: "
+                + str(carga_cpu)
+            )
+
             sleep(0.1)
 
-def profiler():
-	cmd = ["py-spy", "top", "--subprocesses", "--pid", sys.argv[1]]
-	p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1)
-	for line in iter(p.stdout.readline, b''):
-		x = str(line.rstrip())[11:]
-		if(len(x)>0):
-			results_file.write(x)
-			
-        # Cerrar archivo en caso de que se presione C
-		if("Control-C" in x):
-			results_file.seek(0, 0)
-			
-		results_file.write("\n")
-		if(PRINT_INFO):
-			print(x)
-	p.stdout.close()
-	p.wait()
+
+def profiler(pid, results_file, print_info):
+    """
+    Ejecuta py-spy top sobre un proceso existente.
+
+    Nota:
+    En Raspberry PI o Linux, si aparece un error de permisos,
+    puede ser necesario ejecutar este script con sudo.
+    """
+
+    cmd = [
+        "py-spy",
+        "top",
+        "--pid",
+        str(pid),
+        "--subprocesses",
+    ]
+
+    try:
+        proceso = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        for line in proceso.stdout:
+            line = line.rstrip()
+
+            if line:
+                results_file.write(line + "\n")
+                results_file.flush()
+
+                if print_info:
+                    print(line)
+
+        proceso.wait()
+
+    except FileNotFoundError:
+        results_file.write("ERROR: py-spy no está instalado o no está en el PATH.\n")
+        results_file.write("Instale py-spy con:\n")
+        results_file.write("python -m pip install py-spy\n")
+        print("ERROR: py-spy no está instalado o no está en el PATH.")
+
+    except KeyboardInterrupt:
+        print("Perfilado detenido por el usuario.")
+
+    except Exception as error:
+        results_file.write(f"ERROR ejecutando py-spy: {error}\n")
+        print(f"ERROR ejecutando py-spy: {error}")
+
+
+def mostrar_uso():
+    print("Uso:")
+    print("    python Perfilador.py <PID_del_programa_a_perfilar> <True|False>")
+    print()
+    print("Ejemplo:")
+    print("    python Perfilador.py 5251 True")
+    print()
+    print("En Raspberry PI, si hay error de permisos, use:")
+    print("    sudo python Perfilador.py 5251 True")
+
 
 if __name__ == "__main__":
-    
-    ANALIZAR = True
-    PRINT_INFO = True if (sys.argv[2] == "True") else False
-	# Nombre de archivo de perfilado de línea
-    filename = "Logs/Resultado_de_Perfilado" + datetime.now().strftime("%Y-%m-%d_%H-%M")  + ".txt"
-    results_file = open(filename, mode="w", encoding="utf-8")
+    crear_directorio_logs()
 
-    cores_analyzer = Thread(target=cpu_analyze)
-    profiler_analyzer = Thread(target=profiler)
+    if len(sys.argv) < 3:
+        mostrar_uso()
+        sys.exit(1)
 
-    cores_analyzer.start()
-    profiler_analyzer.start()
-    profiler_analyzer.join()
-    results_file.close()
-    ANALIZAR = False
+    try:
+        pid = int(sys.argv[1])
+    except ValueError:
+        print("ERROR: El PID debe ser un número entero.")
+        mostrar_uso()
+        sys.exit(1)
+
+    if not pid_exists(pid):
+        print(f"ERROR: No existe un proceso activo con el PID {pid}.")
+        print("Verifique que el programa a perfilar siga corriendo.")
+        sys.exit(1)
+
+    print_info = sys.argv[2].lower() == "true"
+
+    csv_filename_cores = generar_nombre_archivo_cpu()
+    filename = generar_nombre_archivo_perfilado()
+
+    detener_evento = Event()
+
+    print("Iniciando perfilador...")
+    print(f"PID analizado: {pid}")
+    print(f"Archivo CPU: {csv_filename_cores}")
+    print(f"Archivo perfilado: {filename}")
+
+    with open(filename, mode="w", encoding="utf-8") as results_file:
+        cores_analyzer = Thread(
+            target=cpu_analyze,
+            args=(csv_filename_cores, detener_evento),
+        )
+
+        profiler_analyzer = Thread(
+            target=profiler,
+            args=(pid, results_file, print_info),
+        )
+
+        cores_analyzer.start()
+        profiler_analyzer.start()
+
+        profiler_analyzer.join()
+
+        detener_evento.set()
+        cores_analyzer.join()
+
+    print("Perfilado finalizado.")
+    print("Revise el folder Logs para ver los resultados.")
