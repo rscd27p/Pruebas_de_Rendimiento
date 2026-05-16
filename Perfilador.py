@@ -1,6 +1,7 @@
 # Perfilador de CPU y de línea para Python
 # Refactorizado de Proyecto eBridge por Randy Cespedes <rscd27p - rcespedes27dds@gmail.com>
 # Adaptado para versiones recientes de py-spy
+# Detiene automáticamente el perfilado cuando finaliza el proceso monitoreado.
 
 import sys
 import csv
@@ -32,7 +33,7 @@ def generar_nombre_archivo_perfilado():
     return path.join(LOGS_DIR, f"Resultado_de_Perfilado_{fecha}.txt")
 
 
-def cpu_analyze(csv_filename_cores, detener_evento):
+def cpu_analyze(csv_filename_cores, detener_evento, pid):
     start_time = time.time()
 
     with open(csv_filename_cores, "w", newline="", encoding="utf-8") as file:
@@ -41,16 +42,20 @@ def cpu_analyze(csv_filename_cores, detener_evento):
         writer.writerow(
             ["Time"] + [f"Core_{n}" for n in range(1, cpu_count(logical=True) + 1)]
         )
-
         file.flush()
 
         while not detener_evento.is_set():
+
+            if not pid_exists(pid):
+                print("El proceso monitoreado terminó. Deteniendo análisis de CPU...")
+                detener_evento.set()
+                break
+
             carga_cpu = cpu_percent(percpu=True)
 
             writer.writerow(
                 [datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]] + carga_cpu
             )
-
             file.flush()
 
             elapsed_time = time.time() - start_time
@@ -66,15 +71,7 @@ def cpu_analyze(csv_filename_cores, detener_evento):
             sleep(0.1)
 
 
-def profiler(pid, results_file, print_info):
-    """
-    Ejecuta py-spy top sobre un proceso existente.
-
-    Nota:
-    En Raspberry PI o Linux, si aparece un error de permisos,
-    puede ser necesario ejecutar este script con sudo.
-    """
-
+def profiler(pid, results_file, print_info, detener_evento):
     cmd = [
         "py-spy",
         "top",
@@ -82,6 +79,8 @@ def profiler(pid, results_file, print_info):
         str(pid),
         "--subprocesses",
     ]
+
+    proceso = None
 
     try:
         proceso = subprocess.Popen(
@@ -92,30 +91,58 @@ def profiler(pid, results_file, print_info):
             bufsize=1,
         )
 
-        for line in proceso.stdout:
-            line = line.rstrip()
+        while not detener_evento.is_set():
+
+            if proceso.poll() is not None:
+                break
+
+            if not pid_exists(pid):
+                detener_evento.set()
+                break
+
+            line = proceso.stdout.readline()
 
             if line:
-                results_file.write(line + "\n")
-                results_file.flush()
+                line = line.rstrip()
 
-                if print_info:
-                    print(line)
+                if line:
+                    results_file.write(line + "\n")
+                    results_file.flush()
 
-        proceso.wait()
+                    if print_info:
+                        print(line)
+
+            else:
+                sleep(0.1)
+
+        detener_evento.set()
 
     except FileNotFoundError:
         results_file.write("ERROR: py-spy no está instalado o no está en el PATH.\n")
         results_file.write("Instale py-spy con:\n")
         results_file.write("python -m pip install py-spy\n")
         print("ERROR: py-spy no está instalado o no está en el PATH.")
+        detener_evento.set()
 
     except KeyboardInterrupt:
         print("Perfilado detenido por el usuario.")
+        detener_evento.set()
 
     except Exception as error:
         results_file.write(f"ERROR ejecutando py-spy: {error}\n")
         print(f"ERROR ejecutando py-spy: {error}")
+        detener_evento.set()
+
+    finally:
+        if proceso is not None and proceso.poll() is None:
+            try:
+                proceso.terminate()
+                proceso.wait(timeout=3)
+            except Exception:
+                try:
+                    proceso.kill()
+                except Exception:
+                    pass
 
 
 def mostrar_uso():
@@ -163,19 +190,18 @@ if __name__ == "__main__":
     with open(filename, mode="w", encoding="utf-8") as results_file:
         cores_analyzer = Thread(
             target=cpu_analyze,
-            args=(csv_filename_cores, detener_evento),
+            args=(csv_filename_cores, detener_evento, pid),
         )
 
         profiler_analyzer = Thread(
             target=profiler,
-            args=(pid, results_file, print_info),
+            args=(pid, results_file, print_info, detener_evento),
         )
 
         cores_analyzer.start()
         profiler_analyzer.start()
 
         profiler_analyzer.join()
-
         detener_evento.set()
         cores_analyzer.join()
 
