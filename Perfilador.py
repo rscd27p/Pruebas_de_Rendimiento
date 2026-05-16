@@ -12,7 +12,7 @@ from datetime import datetime
 from time import sleep
 from threading import Thread, Event
 
-from psutil import cpu_count, cpu_percent, pid_exists
+from psutil import cpu_count, cpu_percent, pid_exists, Process
 
 
 LOGS_DIR = "Logs"
@@ -31,6 +31,13 @@ def generar_nombre_archivo_cpu():
 def generar_nombre_archivo_perfilado():
     fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
     return path.join(LOGS_DIR, f"Resultado_de_Perfilado_RPI_{fecha}.txt")
+
+
+def formato_tiempo(segundos):
+    horas = int(segundos // 3600)
+    minutos = int((segundos % 3600) // 60)
+    seg = segundos % 60
+    return f"{horas:02d}:{minutos:02d}:{seg:06.3f}"
 
 
 def cpu_analyze(csv_filename_cores, detener_evento, pid):
@@ -54,18 +61,18 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
             carga_cpu = cpu_percent(percpu=True)
 
+            elapsed_time = time.time() - start_time
+            elapsed_time_formateado = formato_tiempo(elapsed_time)
+
             writer.writerow(
-                [datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]] + carga_cpu
+                [elapsed_time_formateado] + carga_cpu
             )
 
             file.flush()
 
-            elapsed_time = time.time() - start_time
-
             print(
                 "Tiempo Transcurrido: "
-                + str(round(elapsed_time, 2))
-                + " (s)"
+                + elapsed_time_formateado
                 + "\nCarga CPU: "
                 + str(carga_cpu)
             )
@@ -87,11 +94,17 @@ def profiler(pid, results_file, print_info, detener_evento):
         "--pid",
         str(pid),
         "--subprocesses",
+        "--rate",
+        "10",
     ]
 
     proceso = None
 
     try:
+
+        proceso_psutil = Process(pid)
+        proceso_psutil.cpu_percent(interval=None)
+
         proceso = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -109,6 +122,29 @@ def profiler(pid, results_file, print_info, detener_evento):
                 print("El proceso monitoreado finalizó.")
                 detener_evento.set()
                 break
+
+            cpu_proceso = proceso_psutil.cpu_percent(interval=None)
+            cpu_total = cpu_percent(interval=None)
+            cpu_nucleos = cpu_percent(interval=None, percpu=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]
+            separador = "=" * 80
+
+            results_file.write("\n")
+            results_file.write(separador + "\n")
+            results_file.write(f"Muestra tomada en: {timestamp}\n")
+            results_file.write(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%\n")
+            results_file.write(f"CPU total del sistema: {cpu_total:.2f}%\n")
+            results_file.write(f"CPU por núcleo: {cpu_nucleos}\n")
+            results_file.write(separador + "\n")
+
+            if print_info:
+                print(separador)
+                print(f"Muestra tomada en: {timestamp}")
+                print(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%")
+                print(f"CPU total del sistema: {cpu_total:.2f}%")
+                print(f"CPU por núcleo: {cpu_nucleos}")
+                print(separador)
 
             line = proceso.stdout.readline()
 
