@@ -12,7 +12,7 @@ from datetime import datetime
 from time import sleep
 from threading import Thread, Event
 
-from psutil import cpu_count, cpu_percent, pid_exists
+from psutil import cpu_count, cpu_percent, pid_exists, Process
 
 
 LOGS_DIR = "Logs"
@@ -31,6 +31,13 @@ def generar_nombre_archivo_cpu():
 def generar_nombre_archivo_perfilado():
     fecha = datetime.now().strftime("%Y-%m-%d_%H-%M")
     return path.join(LOGS_DIR, f"Resultado_de_Perfilado_Windows_{fecha}.txt")
+
+
+def formato_tiempo(segundos):
+    horas = int(segundos // 3600)
+    minutos = int((segundos % 3600) // 60)
+    seg = segundos % 60
+    return f"{horas:02d}:{minutos:02d}:{seg:06.3f}"
 
 
 def cpu_analyze(csv_filename_cores, detener_evento, pid):
@@ -52,7 +59,6 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
         while not detener_evento.is_set():
 
-            # Si el proceso terminó, detener monitoreo
             if not pid_exists(pid):
                 print("El proceso monitoreado terminó.")
                 detener_evento.set()
@@ -60,18 +66,18 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
             carga_cpu = cpu_percent(percpu=True)
 
+            elapsed_time = time.time() - start_time
+            elapsed_time_formateado = formato_tiempo(elapsed_time)
+
             writer.writerow(
-                [datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-4]] + carga_cpu
+                [elapsed_time_formateado] + carga_cpu
             )
 
             file.flush()
 
-            elapsed_time = time.time() - start_time
-
             print(
                 "Tiempo Transcurrido: "
-                + str(round(elapsed_time, 2))
-                + " (s)"
+                + elapsed_time_formateado
                 + "\nCarga CPU: "
                 + str(carga_cpu)
             )
@@ -81,26 +87,37 @@ def cpu_analyze(csv_filename_cores, detener_evento, pid):
 
 def profiler(pid, results_file, print_info, detener_evento):
     """
-    Ejecuta py-spy dump repetidamente sobre un proceso existente.
+    Ejecuta py-spy top repetidamente sobre un proceso existente.
 
-    Esta versión es más estable en Windows que py-spy top.
+    Esta versión permite mostrar las funciones donde el programa
+    pasa más tiempo durante la ejecución.
     """
 
     try:
 
+        proceso_psutil = Process(pid)
+
+        # Inicializar medición de CPU del proceso
+        proceso_psutil.cpu_percent(interval=None)
+
         while not detener_evento.is_set():
 
-            # Verificar si el proceso sigue vivo
             if not pid_exists(pid):
                 print("El proceso monitoreado finalizó.")
                 detener_evento.set()
                 break
 
+            cpu_proceso = proceso_psutil.cpu_percent(interval=None)
+            cpu_total = cpu_percent(interval=None)
+            cpu_nucleos = cpu_percent(interval=None, percpu=True)
+
             cmd = [
                 "py-spy",
-                "dump",
+                "top",
                 "--pid",
                 str(pid),
+                "--rate",
+                "10",
             ]
 
             proceso = subprocess.Popen(
@@ -111,11 +128,13 @@ def profiler(pid, results_file, print_info, detener_evento):
             )
 
             try:
+                sleep(2)
+                proceso.terminate()
                 salida, _ = proceso.communicate(timeout=5)
 
             except subprocess.TimeoutExpired:
                 proceso.kill()
-                salida = "ERROR: Timeout ejecutando py-spy dump.\n"
+                salida = "ERROR: Timeout ejecutando py-spy top.\n"
 
             if salida:
 
@@ -126,6 +145,9 @@ def profiler(pid, results_file, print_info, detener_evento):
                 results_file.write("\n")
                 results_file.write(separador + "\n")
                 results_file.write(f"Muestra tomada en: {timestamp}\n")
+                results_file.write(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%\n")
+                results_file.write(f"CPU total del sistema: {cpu_total:.2f}%\n")
+                results_file.write(f"CPU por núcleo: {cpu_nucleos}\n")
                 results_file.write(separador + "\n")
                 results_file.write(salida + "\n")
 
@@ -134,6 +156,9 @@ def profiler(pid, results_file, print_info, detener_evento):
                 if print_info:
                     print(separador)
                     print(f"Muestra tomada en: {timestamp}")
+                    print(f"CPU del proceso PID {pid}: {cpu_proceso:.2f}%")
+                    print(f"CPU total del sistema: {cpu_total:.2f}%")
+                    print(f"CPU por núcleo: {cpu_nucleos}")
                     print(separador)
                     print(salida)
 
@@ -208,12 +233,10 @@ if __name__ == "__main__":
 
     crear_directorio_logs()
 
-    # Validar cantidad de argumentos
     if len(sys.argv) < 3:
         mostrar_uso()
         sys.exit(1)
 
-    # Validar PID
     try:
         pid = int(sys.argv[1])
 
@@ -225,7 +248,6 @@ if __name__ == "__main__":
 
         sys.exit(1)
 
-    # Verificar si el proceso existe
     if not pid_exists(pid):
 
         print(f"ERROR: No existe un proceso activo con el PID {pid}.")
@@ -233,10 +255,8 @@ if __name__ == "__main__":
 
         sys.exit(1)
 
-    # Determinar si imprimir información
     print_info = sys.argv[2].lower() == "true"
 
-    # Crear nombres de archivos
     csv_filename_cores = generar_nombre_archivo_cpu()
 
     filename = generar_nombre_archivo_perfilado()
@@ -248,10 +268,8 @@ if __name__ == "__main__":
     print(f"Archivo CPU: {csv_filename_cores}")
     print(f"Archivo perfilado: {filename}")
 
-    # Abrir archivo de resultados
     with open(filename, mode="w", encoding="utf-8") as results_file:
 
-        # Crear hilos
         cores_analyzer = Thread(
             target=cpu_analyze,
             args=(csv_filename_cores, detener_evento, pid),
@@ -262,18 +280,14 @@ if __name__ == "__main__":
             args=(pid, results_file, print_info, detener_evento),
         )
 
-        # Iniciar hilos
         cores_analyzer.start()
 
         profiler_analyzer.start()
 
-        # Esperar a que termine profiler
         profiler_analyzer.join()
 
-        # Detener monitoreo CPU
         detener_evento.set()
 
-        # Esperar thread CPU
         cores_analyzer.join()
 
     print("Perfilado finalizado.")
